@@ -14,7 +14,7 @@ cd ./finatext-intern-coding-test
 make dev/run 
 
 # csvをdbにインポートする
-make dev/run/import:
+make dev/run/import
 
 # api鯖を起動する
 make dev/run/server
