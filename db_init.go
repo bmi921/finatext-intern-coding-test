@@ -20,15 +20,58 @@ func main() {
 	if err != nil {
 		log.Fatalf("データベースへの接続に失敗しました: %v", err)
 	}
-	defer db.Close() // 関数終了時にDB接続を閉じる
+	defer db.Close()
 
-	err = db.Ping()
-	if err != nil {
-		log.Fatalf("データベースへの接続確認 (Ping) に失敗しました: %v", err)
+	// データベース接続の確認とリトライ
+	for i := 0; i < 10; i++ { // あなたの以前のコードから追加
+		err = db.Ping()
+		if err == nil {
+			log.Println("データベースに正常に接続しました。")
+			break
+		}
+		log.Printf("データベースへの接続確認 (Ping) に失敗しました (試行 %d/10): %v", i+1, err)
+		time.Sleep(2 * time.Second)
 	}
-	fmt.Println("データベースに正常に接続しました。")
+	if err != nil {
+		log.Fatalf("データベースが準備できませんでした: %v", err)
+	}
 
-	// データのインポート
+	// --- ここからテーブル作成ロジック ---
+	log.Println("Creating tables if they do not exist...")
+
+	createTradeHistoriesSQL := `
+    CREATE TABLE IF NOT EXISTS trade_histories (
+        user_id VARCHAR(255) NOT NULL,
+        fund_id INT NOT NULL,
+        quantity INT NOT NULL,
+        trade_date DATE NOT NULL,
+        PRIMARY KEY (user_id, fund_id, trade_date)
+    );`
+
+	createReferencePricesSQL := `
+    CREATE TABLE IF NOT EXISTS reference_prices (
+        fund_id INT NOT NULL,
+        price DECIMAL(10, 2) NOT NULL,
+        price_date DATE NOT NULL,
+        PRIMARY KEY (fund_id, price_date)
+    );`
+
+	_, err = db.Exec(createTradeHistoriesSQL)
+	if err != nil {
+		log.Fatalf("Failed to create trade_histories table: %v", err)
+	}
+	log.Println("trade_histories table created or already exists.")
+
+	_, err = db.Exec(createReferencePricesSQL)
+	if err != nil {
+		log.Fatalf("Failed to create reference_prices table: %v", err)
+	}
+	log.Println("reference_prices table created or already exists.")
+
+	log.Println("All necessary tables are ensured.")
+	// --- テーブル作成ロジックここまで ---
+
+	// --- ここからデータのインポート ---
 	// /app/data/ にCSVファイルがあることを想定
 	err = importTradeHistories(db, "/app/data/trade_history.csv")
 	if err != nil {
@@ -41,6 +84,7 @@ func main() {
 		log.Fatalf("reference_prices.csv のインポートに失敗しました: %v", err)
 	}
 	fmt.Println("reference_prices.csv のインポートが完了しました。")
+	// --- データのインポートここまで ---
 }
 
 // importTradeHistories は trade_history.csv を読み込み、trade_histories テーブルに挿入します
