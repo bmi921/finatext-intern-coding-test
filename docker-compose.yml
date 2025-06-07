@@ -2,18 +2,22 @@ version: "3.8"
 services:
   db:
     image: mysql:8.0
+    container_name: db
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: myappdb
+      MYSQL_DATABASE: appdb
       MYSQL_USER: user
       MYSQL_PASSWORD: password
     ports:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+      - ./db_init:/app/db_init
+      - ./data:/app/data
 
   app:
     build: .
+    container_name: app
     depends_on:
       - db
     ports:
@@ -22,9 +26,8 @@ services:
       DB_HOST: db
       DB_USER: user
       DB_PASSWORD: password
-      DB_NAME: myappdb
-    volumes:
-      - .:/app
+      DB_NAME: appdb
+      DB_PORT: 3306
 
 volumes:
   db_data:

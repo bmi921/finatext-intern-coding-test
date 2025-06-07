@@ -8,6 +8,6 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o myapp 
+# RUN go build -o app ./main.go
 
-CMD ["./myapp"]
+CMD ["go","run","./main.go"]
